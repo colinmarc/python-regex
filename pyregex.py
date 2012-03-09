@@ -53,49 +53,60 @@ class State(object):
 	def __init__(self, links=None):
 		self.links = links or []
 
-	def __repr__(self):
-		out = []
-		for fun, state, consume in self.links:
-			target = 'self' if state is self else str(state) 
-			s = str(fun.__self__) + '.' + fun.__name__  + ' '
-			if consume: s += '!'
-			s += '-> ' + target
-			out.append(s)
-		return ', '.join(out) 
+	#def __repr__(self):
+	#	out = []
+	#	for fun, state, consume in self.links:
+	#		target = 'self' if state is self else str(state) 
+	#		s = str(fun.__self__) + '.' + fun.__name__  + ' '
+	#		if consume: s += '!'
+	#		s += '-> ' + target
+	#		out.append(s)
+	#	return ', '.join(out) 
 
-	def link(self, fun, state, consume=True):
-		self.links.append((fun, state, consume))
+	def link(self, fun, state, consume=True, throw_away=False):
+		self.links.append((fun, state, consume, throw_away))
 
-	def __try(self, link, s):
-		fun, state, consume = link
-		s = list(s)
-		if len(s):
-			character = s.pop(0) if consume else s[0]
+	def _try(self, link, consumed, remainder):
+		fun, state, consume, throw_away = link
+		if len(remainder):
+			character = remainder[0]
+			if consume:
+				remainder = remainder[1:]
+				if not throw_away:
+					consumed += character
 		else:
-			if consume: return []
+			if consume: return None
 			character = ''
 
-		#if hasattr(fun, '__self__'): print 'trying', str(fun.__self__) + '.' + fun.__name__, character, '...', fun(character), ' -> ', state
 		if fun(character):
-			return [state] if not isinstance(state, State) else state.__exec(s)
+			return (state, consumed, remainder)
 		else:
-			return []
+			return None
 		
-	def __exec(self, s):
-		return list(set(filter(None, chain(*[self.__try(link, s) for link in self.links]))))
+	def _exec(self, consumed, remainder):
+		results = [self._try(link, consumed, remainder) for link in self.links]
+		return filter(None, results)
 
-	def start(self, s):
-		return self.__exec(s)
-		
+	def run(self, seq):	
+		live_states = list(set(self._exec('', seq)))
+		while True:
+			if len(live_states) == 0:
+				return False
+			for result in live_states:
+				if result[0] is SUCCESS: return result
+			links = [state._exec(consumed, remainder) for state, consumed, remainder in live_states]
+			live_states = list(set(chain(*links)))
+			
+
 class Regex:
 	def __init__(self, definition):
 		self.definition = definition
-		self.__compile()
+		self._compile()
 
 	def __repr__(self):
-		return 'Regex(%s)' % self.definition
+		return '/%r/' % self.definition
 
-	def __compile(self):
+	def _compile(self):
 		
 		classes = []
 		position = 0
@@ -196,9 +207,6 @@ class Regex:
 			(match_character, parse_character, True)
 		]
 
-		def run_test(test, s):
-			return SUCCESS in test.start(s)
-
 		match_begin = False
 		match_end = False
 
@@ -218,7 +226,7 @@ class Regex:
 			chunk += definition.pop(0)
 			
 			for test, parser, creates_class in tests:	
-				if run_test(test, chunk):
+				if test.run(chunk):
 					parser(chunk)
 					chunk = ''
 					last_was_class = creates_class
@@ -228,10 +236,9 @@ class Regex:
 			raise InvalidRegexError("failed to parse %r" % chunk)
 
 		#compile the character classes into a state machine
-		#print ' '.join([str(c) for c in classes])
 		next_state = self.initial_state = State()
 		if not match_begin:
-			self.initial_state.link(lambda c: True, self.initial_state, True)
+			self.initial_state.link(lambda c: True, self.initial_state, consume=True, throw_away=True)
 
 		for i, c in enumerate(classes):
 	
@@ -239,7 +246,7 @@ class Regex:
 			if i+1 == len(classes):
 				if match_end:
 					next_state = State()
-					next_state.link(lambda c: c == '', SUCCESS, False)
+					next_state.link(lambda c: c == '', SUCCESS, consume=False)
 				else:
 					next_state = SUCCESS
 			else:
@@ -253,15 +260,18 @@ class Regex:
 				state.link(c.match, next_state, consume=True)
 
 	def match(self, s):
-		result = self.initial_state.start(s)
-		#print 'got', result
-		return SUCCESS in result
+		result = self.initial_state.run(s)
+		if result:
+			return result[1]
+
+	def __call__(self, s):
+		return self.match(s)
 
 
 if __name__ == '__main__':
 	def test_regex(definition, cases):
-		print 'testing', definition
 		r = Regex(definition)
+		print 'testing', r
 		for c, expected in cases:
 			res = r.match(c)
 			does_match = 'MATCH' if res else 'NO MATCH'
