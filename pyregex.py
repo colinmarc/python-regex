@@ -87,16 +87,23 @@ class State(object):
 		results = [self._try(link, consumed, remainder) for link in self.links]
 		return filter(None, results)
 
-	def run(self, seq):	
+	def run(self, seq, find_all):	
+		success_states = [] 
 		live_states = list(set(self._exec('', seq)))
 		while True:
 			if len(live_states) == 0:
-				return False
+				break
+			links = []
 			for result in live_states:
-				if result[0] is SUCCESS: return result
-			links = [state._exec(consumed, remainder) for state, consumed, remainder in live_states]
+				if result[0] is SUCCESS: 
+					success_states.append(result)
+					if not find_all:
+						break
+				else:
+					links.append(result)
+			links = [state._exec(consumed, remainder) for state, consumed, remainder in links]
 			live_states = list(set(chain(*links)))
-			
+		return success_states			
 
 class Regex:
 	def __init__(self, definition):
@@ -226,7 +233,7 @@ class Regex:
 			chunk += definition.pop(0)
 			
 			for test, parser, creates_class in tests:	
-				if test.run(chunk):
+				if test.run(chunk, find_all=False):
 					parser(chunk)
 					chunk = ''
 					last_was_class = creates_class
@@ -259,10 +266,14 @@ class Regex:
 			else:
 				state.link(c.match, next_state, consume=True)
 
-	def match(self, s):
-		result = self.initial_state.run(s)
-		if result:
-			return result[1]
+	def match(self, s, greedy=True):
+		results = self.initial_state.run(s, find_all=greedy)
+		if results:
+			if greedy:
+				results = sorted(results, key=lambda r: len(r[1]))
+				return results[-1][1]
+			else:
+				return results[0][1]
 		else:
 			return False
 
@@ -288,7 +299,7 @@ if __name__ == '__main__':
 	test_regex('ab{1,3}c', [('abc', 'abc'), ('abbc', 'abbc'), ('abbbc', 'abbbc'), ('ac', False), ('abbbbc', False), ('abb', False)])
 	test_regex('a[bc]*d', [('abcd', 'abcd'), ('ad', 'ad'), ('abcbcccccd', 'abcbcccccd'), ('addd', 'ad')])
 	test_regex('.*', [('abhsueoah', 'abhsueoah'), ('blahblah', 'blahblah'), ('test[', 'test['), ('', '')])
-	test_regex('aaa.*', [('aaahuetaot', 'aaa'), ('aaa', 'aaa'), ('blahbllah', False)])
+	test_regex('aaa.*', [('aaahuetaot', 'aaahuetaot'), ('aaa', 'aaa'), ('blahbllah', False)])
 	test_regex('a.*.*cc', [('aauoueoucc', 'aauoueoucc'), ('abcc', 'abcc'), ('acc', 'acc'), ('blahblah', False), ('xxcc', False)])
 	test_regex('^abc', [('abc', 'abc'), ('abcdef', 'abc'), ('xxxabcxxx', False)])
 	test_regex('abc$', [('abc', 'abc'), ('blahabc', 'abc'), ('abcblah', False)])
