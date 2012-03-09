@@ -104,7 +104,7 @@ class Regex:
 		self._compile()
 
 	def __repr__(self):
-		return '/%r/' % self.definition
+		return '/%s/' % self.definition
 
 	def _compile(self):
 		
@@ -263,6 +263,8 @@ class Regex:
 		result = self.initial_state.run(s)
 		if result:
 			return result[1]
+		else:
+			return False
 
 	def __call__(self, s):
 		return self.match(s)
@@ -275,19 +277,19 @@ if __name__ == '__main__':
 		for c, expected in cases:
 			res = r.match(c)
 			does_match = 'MATCH' if res else 'NO MATCH'
-			print '   ', c.rjust(10) + ':', does_match.ljust(8), 'FAIL!!!' if res != expected else ''
+			print c.rjust(14) + ':', does_match.ljust(8), '(%s, %s)' % (res, expected), 'FAIL!!!' if res != expected else '' 
 
 	test_regex('a', [('a', True), ('b', False)])
-	test_regex('abc', [('abc', True), ('xxabcxx', True), ('cab', False), ('aaa', False)])
-	test_regex('ab?c', [('abc', True), ('ac', True), ('a', False), ('abbb', False), ('abbbc', False)])
-	test_regex('ab*c', [('abc', True), ('ac', True), ('abbbbc', True), ('abbb', False), ('accc', True)])
-	test_regex('ab+c', [('abc', True), ('abbbbc', True), ('ac', False), ('ab', False)])
-	test_regex('ab{3}c', [('abbbc', True), ('abc', False), ('ac', False)])
-	test_regex('ab{1,3}c', [('abc', True), ('abbc', True), ('abbbc', True), ('ac', False), ('abbbbc', False), ('abb', False)])
-	test_regex('a[bc]*d', [('abcd', True), ('ad', True), ('abcbcccccd', True), ('addd', True)])
-	test_regex('.*', [('abhsueoah', True), ('blahblah', True), ('test[', True), ('', True)])
-	test_regex('aaa.*', [('aaahuetaot', True), ('aaa', True), ('blahbllah', False)])
-	test_regex('a.*.*cc', [('aauoueoucc', True), ('abcc', True), ('acc', True), ('blahblah', False), ('xxcc', False)])
-	test_regex('^abc', [('abc', True), ('abcdef', True), ('xxxabcxxx', False)])
-	test_regex('abc$', [('abc', True), ('blahabc', True), ('abcblah', False)])
-	test_regex('^abc$', [('abc', True), ('xxabc', False), ('abcxx', False)])
+	test_regex('abc', [('abc', 'abc'), ('xxabcxx', 'abc'), ('cab', False), ('aaa', False)])
+	test_regex('ab?c', [('abc', 'abc'), ('ac', 'ac'), ('a', False), ('abbb', False), ('abbbc', False)])
+	test_regex('ab*c', [('abc', 'abc'), ('ac', 'ac'), ('abbbbc', 'abbbbc'), ('abbb', False), ('accc', 'ac')])
+	test_regex('ab+c', [('abc', 'abc'), ('abbbbc', 'abbbbc'), ('ac', False), ('ab', False)])
+	test_regex('ab{3}c', [('abbbc', 'abbbc'), ('abc', False), ('ac', False)])
+	test_regex('ab{1,3}c', [('abc', 'abc'), ('abbc', 'abbc'), ('abbbc', 'abbbc'), ('ac', False), ('abbbbc', False), ('abb', False)])
+	test_regex('a[bc]*d', [('abcd', 'abcd'), ('ad', 'ad'), ('abcbcccccd', 'abcbcccccd'), ('addd', 'addd')])
+	test_regex('.*', [('abhsueoah', 'abhsueoah'), ('blahblah', 'blahblah'), ('test[', 'test['), ('', '')])
+	test_regex('aaa.*', [('aaahuetaot', 'aaahuetaot'), ('aaa', 'aaa'), ('blahbllah', False)])
+	test_regex('a.*.*cc', [('aauoueoucc', 'aauoueoucc'), ('abcc', 'abcc'), ('acc', 'acc'), ('blahblah', False), ('xxcc', False)])
+	test_regex('^abc', [('abc', 'abc'), ('abcdef', 'abc'), ('xxxabcxxx', False)])
+	test_regex('abc$', [('abc', 'abc'), ('blahabc', 'abc'), ('abcblah', False)])
+	test_regex('^abc$', [('abc', 'abc'), ('xxabc', False), ('abcxx', False)])
