@@ -276,19 +276,19 @@ if __name__ == '__main__':
 		print 'testing', r
 		for c, expected in cases:
 			res = r.match(c)
-			does_match = 'MATCH' if res else 'NO MATCH'
-			print c.rjust(14) + ':', does_match.ljust(8), '(%s, %s)' % (res, expected), 'FAIL!!!' if res != expected else '' 
+			does_match = 'MATCH' if res != False else 'NO MATCH'
+			print c.rjust(14) + ':', does_match.ljust(8), '(%s, %s)' % (expected, res), 'FAIL!!!' if res != expected else '' 
 
-	test_regex('a', [('a', True), ('b', False)])
+	test_regex('a', [('a', 'a'), ('b', False)])
 	test_regex('abc', [('abc', 'abc'), ('xxabcxx', 'abc'), ('cab', False), ('aaa', False)])
 	test_regex('ab?c', [('abc', 'abc'), ('ac', 'ac'), ('a', False), ('abbb', False), ('abbbc', False)])
 	test_regex('ab*c', [('abc', 'abc'), ('ac', 'ac'), ('abbbbc', 'abbbbc'), ('abbb', False), ('accc', 'ac')])
 	test_regex('ab+c', [('abc', 'abc'), ('abbbbc', 'abbbbc'), ('ac', False), ('ab', False)])
 	test_regex('ab{3}c', [('abbbc', 'abbbc'), ('abc', False), ('ac', False)])
 	test_regex('ab{1,3}c', [('abc', 'abc'), ('abbc', 'abbc'), ('abbbc', 'abbbc'), ('ac', False), ('abbbbc', False), ('abb', False)])
-	test_regex('a[bc]*d', [('abcd', 'abcd'), ('ad', 'ad'), ('abcbcccccd', 'abcbcccccd'), ('addd', 'addd')])
+	test_regex('a[bc]*d', [('abcd', 'abcd'), ('ad', 'ad'), ('abcbcccccd', 'abcbcccccd'), ('addd', 'ad')])
 	test_regex('.*', [('abhsueoah', 'abhsueoah'), ('blahblah', 'blahblah'), ('test[', 'test['), ('', '')])
-	test_regex('aaa.*', [('aaahuetaot', 'aaahuetaot'), ('aaa', 'aaa'), ('blahbllah', False)])
+	test_regex('aaa.*', [('aaahuetaot', 'aaa'), ('aaa', 'aaa'), ('blahbllah', False)])
 	test_regex('a.*.*cc', [('aauoueoucc', 'aauoueoucc'), ('abcc', 'abcc'), ('acc', 'acc'), ('blahblah', False), ('xxcc', False)])
 	test_regex('^abc', [('abc', 'abc'), ('abcdef', 'abc'), ('xxxabcxxx', False)])
 	test_regex('abc$', [('abc', 'abc'), ('blahabc', 'abc'), ('abcblah', False)])
